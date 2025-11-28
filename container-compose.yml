@@ -1,0 +1,21 @@
+version: "3.7"
+
+services:
+  tcpserver:
+    build: .
+    image: quay.io/ivanstalyn/tcpserver:latest
+    container_name: ismf_tcpserver
+    restart: unless-stopped
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - LOG_LEVEL=${LOG_LEVEL}
+      - PORT=${PORT}
+      - DELAY_RANDOM_ENABLED=${DELAY_RANDOM_ENABLED}
+      - DELAY_MAX=${DELAY_MAX}
+      - DELAY_MIN=${DELAY_MIN}
+
+networks:
+  default:
+    name: ismf_network
+    external: true

@@ -5,7 +5,7 @@ const {delay} = require('../helpers/util');
 
 class TCPServer {
 
-  constructor(params = { port: 9000, host: '127.0.0.1' }) {
+  constructor(params = { port: 9000, host: 'na' }) {
     this.port = params.port;
     this.host = params.host;
     this.server = net.createServer();
@@ -65,9 +65,16 @@ class TCPServer {
   }
 
   start() {
-    this.server.listen(this.port, this.host, () => {
-      logger.info(`TCP Server escuchando en ${this.host}:${this.port}`, 'start');
-    });
+
+    if (this.host !== 'na') {
+      this.server.listen(this.port, () => {
+        logger.info(`TCP Server escuchando en ${this.port}`, 'start');
+      });
+    } else {
+      this.server.listen(this.port, this.host, () => {
+        logger.info(`TCP Server escuchando en ${this.host}:${this.port}`, 'start');
+      });
+    }
   };
 
   stop() {
@@ -75,7 +82,7 @@ class TCPServer {
       logger.info('Deteniendo TCP server...', 'stop');
     });
     this.connections.forEach(socket => socket.destroy());
-  }
+  };
 }
 
 module.exports = TCPServer;

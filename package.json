@@ -16,13 +16,13 @@
     }
   },
   "dependencies": {
+    "@faker-js/faker": "^10.1.0",
     "dotenv": "^10.0.0",
     "log4js": "^6.3.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.16.3",
-    "@faker-js/faker": "^10.1.0",
     "@types/jest": "^27.0.2",
     "eslint": "^8.3.0",
     "eslint-config-strongloop": "^2.1.0",

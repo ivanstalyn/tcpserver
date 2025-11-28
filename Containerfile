@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/nodejs-18-minimal:latest
+FROM registry.access.redhat.com/ubi8/nodejs-24-minimal:latest
 
 USER 0
 RUN mkdir -p /opt/app-root/src
