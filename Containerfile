@@ -5,7 +5,6 @@ RUN mkdir -p /opt/app-root/src
 
 COPY package*.json /opt/app-root/src
 COPY servidor /opt/app-root/src/servidor
-COPY public /opt/app-root/src/public
 
 RUN chown -R 1001:0 /opt/app-root
 
