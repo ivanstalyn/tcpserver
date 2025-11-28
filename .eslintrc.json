@@ -1,0 +1,20 @@
+{
+    "env": {
+        "commonjs": true,
+        "node": true,
+        "mocha": true,
+        "jest/globals": true,
+        "es6": true
+    },
+    "extends": "strongloop",
+    "parserOptions": { 
+        "ecmaVersion": 12,
+        "sourceType": "module",
+        "requireConfigFile": false
+    },
+    "rules":{
+        "max-len": ["error", { "ignoreStrings": true, "ignoreComments": true, "code":160 }]
+    },
+    "plugins": ["jest"],
+    "parser": "@babel/eslint-parser"
+}

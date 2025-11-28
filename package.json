@@ -1,0 +1,33 @@
+{
+  "name": "tcpserver",
+  "version": "1.0.0",
+  "description": "tcpserver",
+  "scripts": {
+    "dev": "nodemon servidor/app.js",
+    "start": "node --tls-cipher-list='DEFAULT:!DH' servidor/app.js",
+    "lint": "eslint --fix --ignore-path .gitignore ."
+  },
+  "keywords": [],
+  "author": "Iván Muela",
+  "license": "ISC",
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run lint"
+    }
+  },
+  "dependencies": {
+    "dotenv": "^10.0.0",
+    "log4js": "^6.3.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "@babel/eslint-parser": "^7.16.3",
+    "@faker-js/faker": "^10.1.0",
+    "@types/jest": "^27.0.2",
+    "eslint": "^8.3.0",
+    "eslint-config-strongloop": "^2.1.0",
+    "eslint-plugin-jest": "^25.3.0",
+    "husky": "^7.0.4",
+    "nodemon": "^3.0.1"
+  }
+}

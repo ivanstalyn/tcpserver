@@ -1,0 +1,6 @@
+node_modules/
+node_modules_linux/
+__mocks__
+__tests__
+.jest
+helm-chart/
