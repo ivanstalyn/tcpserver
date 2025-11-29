@@ -3,8 +3,8 @@ FROM registry.access.redhat.com/ubi8/nodejs-24-minimal:latest
 USER 0
 RUN mkdir -p {/opt/app-root/src, /opt/app-root/src/servidor}
 
-COPY package*.json /opt/app-root/src
-COPY servidor /opt/app-root/src/servidor
+COPY package*.json /opt/app-root/src/
+COPY servidor /opt/app-root/src/servidor/
 
 RUN chown -R 1001:0 /opt/app-root
 
