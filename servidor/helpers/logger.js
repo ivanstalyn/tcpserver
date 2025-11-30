@@ -1,5 +1,5 @@
 const log4js = require('log4js');
-// Logger configuración
+/* Configuracion de log4js */
 log4js.configure({
   appenders: {
     console: { type: 'console' },
@@ -8,8 +8,10 @@ log4js.configure({
     default: { appenders: ['console'], level: 'TRACE' },
   },
 });
+/* Obtiene el logger de log4js */
 const log4jsLogger = log4js.getLogger();
 
+/* Definicion de niveles de log */
 const Level = {
   TRACE: { priority: 0, outputString: 'TRACE' },
   DEBUG: { priority: 100, outputString: 'DEBUG' },
@@ -20,7 +22,7 @@ const Level = {
   MARK: { priority: 600, outputString: 'MARK' },
   OFF: { priority: 1000, outputString: 'OFF' },
 };
-
+/* Nivel de log por defecto */
 let logLevel = Level.INFO;
 
 /**
@@ -32,6 +34,7 @@ const setLogLevel = (newLevel) => {
   logLevel = newLevel;
 };
 
+/* Funcion que permite setear el nivel de log por nombre */
 const setLogLevelByName = (newLevel) => {
   switch (newLevel) {
     case 'TRACE':
@@ -60,9 +63,11 @@ const setLogLevelByName = (newLevel) => {
       setLogLevel(Level.INFO);
   }
 };
-
+/* Setea el nivel de log inicial desde la variable de entorno */
 setLogLevelByName(process.env.LOG_LEVEL);
-
+/* Funcion que maneja el logueo de mensajes */
+/* Recibe el nivel del mensaje, el mensaje, la fuente y una funcion de logueo opcional */
+/* Retorna el mensaje logueado o null si no se loguea */
 const log = (messageLogLevel, message, source, logFunction) => {
   let computedMessage = null;
   if (messageLogLevel.priority >= logLevel.priority) {
@@ -72,7 +77,8 @@ const log = (messageLogLevel, message, source, logFunction) => {
 
   return computedMessage;
 };
-
+/* Funcion que realiza el logueo segun el nivel */
+/* Recibe el mensaje computado y el nivel del mensaje */
 const logMessage = (computedMessage, messageLogLevel) => {
   switch (messageLogLevel) {
     case Level.TRACE:
@@ -99,34 +105,45 @@ const logMessage = (computedMessage, messageLogLevel) => {
   }
 };
 
+/* Funciones de logueo por nivel */
+/* Retornan el mensaje logueado o null si no se loguea */
+/* Funcion que maneja el logueo de trazas */
 const trace = (message, source, logFunction) => {
   return log(Level.TRACE, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de debug */
 const debug = (message, source, logFunction) => {
   return log(Level.DEBUG, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de informacion */
 const info = (message, source, logFunction) => {
   return log(Level.INFO, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de advertencias */
 const warn = (message, source, logFunction) => {
   return log(Level.WARN, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de errores */
 const error = (message, source, logFunction) => {
   return log(Level.ERROR, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de mensajes fatales */
 const fatal = (message, source, logFunction) => {
   return log(Level.FATAL, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de marcas */
 const mark = (message, source, logFunction) => {
   return log(Level.MARK, message, source, logFunction);
 };
 
+/* Funcion que maneja el logueo de errores */
+/* Recibe el objeto error y la fuente */
 const logCatch = (_errObject, _source) => {
 
   if (_errObject.message){

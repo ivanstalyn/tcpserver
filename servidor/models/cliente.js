@@ -1,41 +1,61 @@
 const { fakerES } = require('@faker-js/faker');
 const logger = require('../helpers/logger');
 
+/* Clase que representa un cliente */
 class Cliente {
 
+  /* Constructor del cliente */
+  /* Recibe la trama completa */
   constructor(trama) {
-    // 1712705936xxxxxxxxxxxxxxx
-    let logLocation = `Cliente::${this.constructor.name}`;
-    this.id = trama.substring(0, 10); // 1712705936
-    this.nombre = '';
-    this.apellido = '';
-    this.direccion = '';
-    this.ciudad = '';
-    this.celular = '';
-    this.email = '';
 
+    let logLocation = `Cliente::${this.constructor.name}`;
+    this.id = trama.substring(0, 10); // 10 caracteres para el ID del cliente
+    this.nombre = ''; // Inicializa las demas propiedades vacias
+    this.apellido = ''; // Inicializa las demas propiedades vacias
+    this.direccion = ''; // Inicializa las demas propiedades vacias
+    this.ciudad = ''; // Inicializa las demas propiedades vacias
+    this.celular = ''; // Inicializa las demas propiedades vacias
+    this.email = ''; // Inicializa las demas propiedades vacias
+    /* Imprime los datos del cliente */
     this._printData(logLocation);
   };
+
+  /* Metodo que simula la consulta de datos del cliente */
+  /* Utiliza la libreria faker para generar datos aleatorios */
 
   consultar(){
     let logLocation = `Cliente::${this.consultar.name}`;
 
-    this.nombre = fakerES.person.firstName().padStart(20);
-    this.apellido = fakerES.person.lastName().padStart(20);
-    this.direccion = fakerES.location.streetAddress().padStart(100);
-    this.ciudad = fakerES.location.city().padStart(20);
-    this.celular = fakerES.phone.number({style: 'national'}).padStart(14);
-    this.email = fakerES.internet.email({firstName: this.nombre, lastName: this.apellido}).padStart(50);
-
+    this.nombre = fakerES.person.firstName().padStart(20); // Genera un nombre aleatorio
+    this.apellido = fakerES.person.lastName().padStart(20); // Genera un apellido aleatorio
+    this.direccion = fakerES.location.streetAddress().padStart(100); // Genera una direccion aleatoria
+    this.ciudad = fakerES.location.city().padStart(20); // Genera una ciudad aleatoria y rellena a la izquierda con espacios
+    this.celular = fakerES.phone.number({style: 'national'}).padStart(14); // Genera un numero de celular aleatorio y rellena a la izquierda con espacios
+    this.email = fakerES.internet.email({firstName: this.nombre, lastName: this.apellido}).padStart(50); // Genera un email aleatorio y rellena a la izquierda con espacios
+    /* Imprime los datos del cliente */
     this._printData(logLocation);
 
   };
 
+  /* Metodo que genera la trama del cliente */
+  /* Retorna la trama completa del cliente */
+  /* Formato:
+   | ID(10) | NOMBRE(20) | APELLIDO(20) | CELULAR(14) | DIRECCION(100) | CIUDAD(20) | EMAIL(50) |
+  */
+  /* retorna un total de 234 caracteres */
   getTrama(){
     return `${this.id}${this.nombre}${this.apellido}${this.celular}${this.direccion}${this.ciudad}${this.email}`;
   };
 
+  /* Metodo que imprime los datos del cliente */
+  /* Util para depuracion */
+  /* Recibe la ubicacion del log */
   _printData(logLocation = ''){
+    /* Imprime cada propiedad del cliente */
+    /* Recorre las propiedades del objeto */
+    /* Imprime el nombre de la propiedad y su valor */
+    /* Trim para eliminar espacios en blanco */
+    /* Retorna void */
     Object.keys(this).forEach(property => {
       logger.trace(`${property}: ${this[property].toString().trim()}`, logLocation);
     });
