@@ -42,7 +42,7 @@ class TCPServer {
       logger.info(`Data respuesta a cliente ${socket.id}: ${respuesta}`);
       if (is_kernel_buffer_full) {
         logger.debug(`Datos enviados exitosamente desde kernel buffer a cliente ${socket.id}!`, 'data');
-        //socket.end();
+        // socket.end();
       } else {
         socket.pause();
       }
