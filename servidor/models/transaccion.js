@@ -8,12 +8,12 @@ class Transaccion {
   /* Constructor de la transacción
    * Recibe la trama de la transacción
    * La trama es una cadena de texto con la informacion de la transacción
-   * Ejemplo: 2025111921570800019999000000000000000000000000000000011712705936xxxxxxxxxxxxxxx
+   * Ejemplo: 2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
    */
   constructor(trama) {
     this.trama = trama; // Trama de la transacción
     this.cabecera = new Cabecera(trama); // Cabecera de la transacción
-    this.datos = trama.substring(54); // Datos adicionales despues de la cabecera
+    this.datos = trama.substring(58); // Datos adicionales despues de la cabecera
   };
 
   /* Metodo que obtiene la respuesta de la transacción
@@ -24,7 +24,7 @@ class Transaccion {
   getRespuesta() {
 
     /* Selecciona la accion según el codigo de transacción */
-    switch (this.cabecera.codigoTransaccion) {
+    switch (this.cabecera.tipoTransaccion) {
       case '0001':
         /* Obtener datos del cliente */
         return this.getDatoscliente();
@@ -44,21 +44,20 @@ class Transaccion {
 
   getDatoscliente(){
     /* Ejemplo trana de consulta de un cliente:
-     * 2025111921570800019999000000000000000000000000000000011712705936xxxxxxxxxxxxxxx
+     * 2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
      * Extrae los datos del cliente
      * 1712705936 es el numero de cliente
-     * xxxxxxxxxxxxxxx son datos adicionales
      */
     let cliente = new Cliente(this.datos.substring(0, 10)); // 1712705936
     cliente.consultar(); // Consulta los datos del cliente
     this.cabecera.codigoRespuesta = '0000'; // Código de respuesta exitoso
-    this.cabecera.codigoTransaccion = '1001'; // Código de transacción de respuesta
+    this.cabecera.tipoTransaccion = '1001'; // Código de transacción de respuesta
     return `${this.cabecera.getTrama()}${cliente.getTrama()}`;
   };
 
   getDatosFactura(){
     /* Ejemplo trama de consulta de una factura:
-     *  2025111921570800029999000000000000000000000000000000270000000123
+     *  2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed9599640000000123
      * Extrae los datos de la factura
      * 0000000123 es el numero de factura
      */
@@ -66,7 +65,7 @@ class Transaccion {
     factura.consultar(); // Consulta los datos de la factura
     let datosFactura = factura.getTrama(); // Obtiene la trama de la factura
     this.cabecera.codigoRespuesta = '0000'; // Código de respuesta exitoso
-    this.cabecera.codigoTransaccion = '2002'; // Código de transacción de respuesta
+    this.cabecera.tipoTransaccion = '2002'; // Código de transacción de respuesta
     return `${this.cabecera.getTrama()}${datosFactura}`;
   };
 

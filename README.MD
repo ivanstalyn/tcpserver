@@ -10,11 +10,11 @@ El servidor acepta mensajes de transacción en una única línea de texto con fo
 
 Ejemplo de transacción de consulta de un cliente:
 
-    2025111921570800019999000000000000000000000000000000011712705936
+    2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
 
 Ejemplo de transacción de consulta de una factura:
 
-    2025111921570800029999000000000000000000000000000000270000000123
+    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
 
 
 ## Cómo probar localmente
@@ -28,8 +28,8 @@ cd ~/Documentos/desarrollo/varios-ismf/tcpserver
 2. Enviar un mensaje de prueba al servidor (suponiendo que el servidor escucha en localhost:12345). Reemplace el puerto si es distinto.
 
 ```bash
-# Ejemplo usando netcat (nc). Cambie puerto y ejemplo según corresponda.
-echo -n "2025111921570800019999000000000000000000000000000000011712705936" | nc localhost 12345
+# Ejemplo usando netcat (nc).
+echo -n "2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936" | nc localhost 12345
 ```
 
 3. Observar la respuesta del servidor en la consola o en los logs del proyecto.
@@ -40,11 +40,11 @@ Nota: Si no dispone de `nc`, puede usar `socat` u otra herramienta de cliente TC
 
 - Consulta de cliente (ejemplo):
 
-    2025111921570800019999000000000000000000000000000000011712705936
+    2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
 
 - Consulta de factura (ejemplo):
 
-    2025111921570800029999000000000000000000000000000000270000000123
+    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
 
 ---
 
@@ -72,8 +72,8 @@ Esta sección describe los componentes principales que integran la solución `tc
 
 - Responsabilidad: Analizar la trama entrante, enrutar por tipo de transacción y generar la respuesta adecuada.
 - Comportamiento:
-    - Instancia `Cabecera` con los primeros 54 caracteres.
-    - Extrae `datos` desde la posición 54 en adelante.
+    - Instancia `Cabecera` con los primeros 58 caracteres.
+    - Extrae `datos` desde la posición 58 en adelante.
     - Según `cabecera.codigoTransaccion` ejecuta:
         - `0001` -> `getDatoscliente()` (genera trama de cliente y responde con código transacción `1001`).
         - `0002` -> `getDatosFactura()` (genera trama de factura y responde con código transacción `2002`).
@@ -82,9 +82,9 @@ Esta sección describe los componentes principales que integran la solución `tc
 ### 4) Modelos de dominio (`servidor/models/*.js`)
 
 - `cabecera.js`:
-    - Representa los primeros 54 caracteres de la trama.
-    - Campos: `fecha(8)`, `hora(6)`, `codigoTransaccion(4)`, `codigoRespuesta(4)`, `id(32)`.
-    - `getTrama()` devuelve la cabecera formateada (54 caracteres).
+    - Representa los primeros 58 caracteres de la trama.
+    - Campos: `fecha(8)`, `hora(6)`, `codigoTransaccion(4)`, `codigoRespuesta(4)`, `idTrx(36)`.
+    - `getTrama()` devuelve la cabecera formateada (58 caracteres).
 
 - `cliente.js`:
     - Representa la información del cliente.
@@ -129,7 +129,7 @@ Esta sección describe los componentes principales que integran la solución `tc
     - `@faker-js/faker` — generación de datos de ejemplo.
     - `dotenv` — carga variables de entorno.
     - `log4js` — logging.
-    - `uuid` — (presente aunque no se usa explícitamente en los ficheros leídos).
+    - `uuid` — generación de uuidV4.
 
 ### 8) Flujo de una petición (resumen)
 
@@ -148,51 +148,51 @@ La siguiente especificación recoge los campos y longitudes tal y como se infier
 NOTA: El servidor trata las tramas como cadenas de texto con padding mediante espacios en algunos casos; los ejemplos iniciales están compuestos por dígitos.
 
 ### A) Cabecera (común a todas las tramas)
-- Longitud total: 54 caracteres
+- Longitud total: 58 caracteres
 - Campos (offset:longitud — descripción):
     - 0:8 — `fecha` (YYYYMMDD) — 8 chars
     - 8:6 — `hora` (hhmmss) — 6 chars
-    - 14:4 — `codigoTransaccion` — 4 chars (ej. `0001`, `0002`)
+    - 14:4 — `tipoTransaccion` — 4 chars (ej. `0001`, `0002`)
     - 18:4 — `codigoRespuesta` — 4 chars (retorno; por ejemplo `0000` o `5555`)
-    - 22:32 — `id` — 32 chars (identificador/metadata, rellenado con espacios si es necesario)
+    - 22:36 — `trxId` — 36 chars (identificador único de transacción uuidv4)
 
-Ejemplo (54 chars):
+Ejemplo (58 chars):
 
-    20251119 215708 0001 9999 00000000000000000000000000000001
+    20251119 215708 0001 9999 faf89fc4-22a8-43a9-9a69-ebf1ed959964
 
 ### B) Trama de entrada (solicitud)
 
-Las tramas de entrada contienen la cabecera (54 chars) seguida de los datos específicos de la transacción.
+Las tramas de entrada contienen la cabecera (58 chars) seguida de los datos específicos de la transacción.
 
-- Formato general: `CABECERA(54)` + `DATOS(...)`
+- Formato general: `CABECERA(58)` + `DATOS(...)`
 
 - Para los tipos soportados en el código:
     1) Transacción `0001` — Consulta de cliente
          - Datos esperados: ID de cliente — 10 caracteres
-         - Longitud mínima total de la trama de entrada: 54 + 10 = 64 caracteres
+         - Longitud mínima total de la trama de entrada: 58 + 10 = 68 caracteres
          - Ejemplo (entrada):
 
-             2025111921570800019999000000000000000000000000000000011712705936
+             2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
 
-         - Observación: en el ejemplo real hay dígitos adicionales al final; la implementación en `Transaccion` toma `this.datos = trama.substring(54)` y luego en `getDatoscliente()` usa `this.datos.substring(0, 10)` para construir el `Cliente`.
+         - Observación: en el ejemplo real hay dígitos adicionales al final; la implementación en `Transaccion` toma `this.datos = trama.substring(58)` y luego en `getDatoscliente()` usa `this.datos.substring(0, 10)` para construir el `Cliente`.
 
     2) Transacción `0002` — Consulta de factura
          - Datos esperados: Número de factura — 10 caracteres
-         - Longitud mínima total de la trama de entrada: 54 + 10 = 64 caracteres
+         - Longitud mínima total de la trama de entrada: 58 + 10 = 68 caracteres
          - Ejemplo (entrada):
 
-             2025111921570800029999000000000000000000000000000000270000000123
+             2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
 
          - Observación: `Transaccion` extrae los primeros 10 caracteres de `datos` para crear `Factura`.
 
 ### C) Tramas de respuesta
 
-Las respuestas se construyen concatenando `cabecera.getTrama()` (54 chars) más la `trama` del modelo solicitado.
+Las respuestas se construyen concatenando `cabecera.getTrama()` (58 chars) más la `trama` del modelo solicitado.
 
 1) Respuesta a `0001` (cliente)
      - Cabecera en respuesta:
          - `codigoRespuesta` se fija a `0000` en caso de éxito.
-         - `codigoTransaccion` se cambia a `1001` (código de respuesta para cliente).
+         - `tipoTransaccion` se cambia a `1001` (código de respuesta para cliente).
      - Payload: `Cliente.getTrama()` — 234 caracteres.
          - Cliente detalle (campos y longitudes):
              - ID: 10
@@ -203,30 +203,30 @@ Las respuestas se construyen concatenando `cabecera.getTrama()` (54 chars) más 
              - CIUDAD: 20
              - EMAIL: 50
          - Total payload cliente = 234
-     - Longitud total respuesta cliente = 54 (cabecera) + 234 = 288 caracteres
+     - Longitud total respuesta cliente = 58 (cabecera) + 234 = 292 caracteres
 
 2) Respuesta a `0002` (factura)
      - Cabecera en respuesta:
          - `codigoRespuesta` se fija a `0000` en caso de éxito.
-         - `codigoTransaccion` se cambia a `2002` (código de respuesta para factura).
+         - `tipoTransaccion` se cambia a `2002` (código de respuesta para factura).
      - Payload: `Factura.getTrama()` — 1484 caracteres.
          - Detalle:
              - NRO: 10
              - CLIENTE: 234 (ver arriba)
              - DETALLE_ITEMS: 10 items * 124 chars = 1240
          - Total payload factura = 10 + 234 + 1240 = 1484
-     - Longitud total respuesta factura = 54 (cabecera) + 1484 = 1538 caracteres
+     - Longitud total respuesta factura = 58 (cabecera) + 1484 = 1542 caracteres
 
 ### D) Respuesta en caso de error o transacción no soportada
 
-- Si `codigoTransaccion` no es reconocido, `Transaccion` establece `cabecera.codigoRespuesta = '5555'` y devuelve `cabecera.getTrama()` concatenada con `this.datos` (sin procesar).
-- Longitud: 54 + longitud de `datos` (dependiente de la entrada). Si la entrada solo lleva 10 bytes de `datos`, la respuesta será 64 caracteres.
+- Si `tipoTransaccion` no es reconocido, `Transaccion` establece `cabecera.codigoRespuesta = '5555'` y devuelve `cabecera.getTrama()` concatenada con `this.datos` (sin procesar).
+- Longitud: 58 + longitud de `datos` (dependiente de la entrada). Si la entrada solo lleva 10 bytes de `datos`, la respuesta será 68 caracteres.
 
 ### E) Resumen de tamaños
 
-- Trama de entrada mínima (ambos tipos): 64 chars (54 cabecera + 10 dato clave)
-- Respuesta `0001` (cliente): 288 chars
-- Respuesta `0002` (factura): 1538 chars
+- Trama de entrada mínima (ambos tipos): 68 chars (58 cabecera + 10 dato clave)
+- Respuesta `0001` (cliente): 292 chars
+- Respuesta `0002` (factura): 1542 chars
 
 
 

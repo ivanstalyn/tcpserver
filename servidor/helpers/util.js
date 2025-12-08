@@ -14,7 +14,7 @@ const delay = (ms = 0) => {
     tiempoms = Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  logger.debug(`Tiempo espera: ${tiempoms} ms`, msgLocation);
+  logger.info(`Tiempo espera: ${tiempoms} ms`, msgLocation);
 
   return new Promise((resolve) => {
     setTimeout(resolve, tiempoms);

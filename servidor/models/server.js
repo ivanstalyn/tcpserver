@@ -25,23 +25,29 @@ class TCPServer {
 
   /* Metodo que maneja la conexion de un cliente */
   handleConnection(socket) {
-    const clientAddress = `${socket.remoteAddress}:${socket.remotePort}`;
     socket.id = this.clientId++;
-    console.log(`Cliente ${socket.id} conectado: ${clientAddress}`);
+    const location = `${socket.remoteAddress}:${socket.remotePort}:${socket.id}`;
+
+    logger.info('Cliente conectado.', location);
     this.connections.add(socket);
 
     /* Maneja los eventos del socket */
     /* Evento data: cuando el cliente envia datos */
-    socket.on('data', (data) => {
-      logger.info(`Data del cliente ${socket.id} desde ${clientAddress}: ${data.toString().trim()}`);
+    socket.on('data', async(data) => {
+      let datos = data.toString().trim();
+      logger.info(`IN  : '${datos}'`, location);
 
       let trx = new Transaccion(data.toString());
       let respuesta = trx.getRespuesta();
-      delay();
-      let is_kernel_buffer_full = socket.write(`${respuesta}\n`);
-      logger.info(`Data respuesta a cliente ${socket.id}: ${respuesta}`);
+
+      await delay();
+
+      let is_kernel_buffer_full = socket.write(`${respuesta}\x03`);
+      logger.info(`OUT : '${respuesta}'`, location);
+      logger.info(`IN size  : ${datos.length}`, location);
+      logger.info(`OUT size : ${respuesta.length}`, location);
       if (is_kernel_buffer_full) {
-        logger.debug(`Datos enviados exitosamente desde kernel buffer a cliente ${socket.id}!`, 'data');
+        logger.debug('Datos enviados exitosamente desde kernel buffer a cliente.', location);
         // socket.end();
       } else {
         socket.pause();
@@ -51,19 +57,19 @@ class TCPServer {
 
     /* Evento drain: cuando el buffer del kernel esta vacio */
     socket.on('drain', () => {
-      logger.debug(`Drain stream para cliente ${socket.id}`, 'drain');
+      logger.debug('Drain stream para cliente.', location);
       socket.resume();
     });
 
     /* Evento end: cuando el cliente se desconecta */
     socket.on('end', () => {
-      logger.info(`Cliente ${socket.id} desconectado: ${clientAddress}`, 'end');
+      logger.info('Cliente desconectado', location);
       this.connections.delete(socket);
     });
 
     /* Evento error: cuando ocurre un error en el socket */
     socket.on('error', (err) => {
-      logger.error(`Socket error desde ${clientAddress} (cliente: ${socket.id}): ${err.message}`, 'error');
+      logger.error(`Socket error: ${err.message}`, location);
       this.connections.delete(socket);
     });
   }
