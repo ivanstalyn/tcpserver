@@ -36,6 +36,34 @@ echo -n "2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936" |
 
 Nota: Si no dispone de `nc`, puede usar `socat` u otra herramienta de cliente TCP.
 
+## Desarrollo y pruebas
+
+Sigue estos pasos para preparar el entorno de desarrollo, ejecutar el linter y los tests locales.
+
+1. Instalar dependencias:
+
+```bash
+npm install
+```
+
+2. Ejecutar linter (aplica correcciones automáticas cuando sea posible):
+
+```bash
+npm run lint
+```
+
+3. Ejecutar tests unitarios (Jest + babel-jest se usan para transformar dependencias ESM como `@faker-js/faker`):
+
+```bash
+npm test
+```
+
+Notas:
+- En este proyecto se configuró `babel-jest` para permitir que Jest transforme módulos ESM (por ejemplo `@faker-js/faker`).
+- Se eliminó el mock manual de `@faker-js/faker` y ahora las pruebas usan la versión real transformada por Babel.
+- Si necesitas volver al mock manual por razones de estabilidad en tests, revisa el historial de git para recuperarlo.
+
+
 ## Mensajes de ejemplo para pruebas
 
 - Consulta de cliente (ejemplo):
