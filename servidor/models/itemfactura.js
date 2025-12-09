@@ -11,21 +11,28 @@ class ItemFactura {
   constructor(orden) {
 
     let logLocation = `ItemFactura::${this.constructor.name}`;
-    let cantidad = fakerES.number.int({ min: 1, max: 20 });// Cantidad entre 1 y 20
-    let precio = parseFloat(fakerES.commerce.price({ min: 1, max: 200 })).toFixed(2); // Precio entre 10 y 200 con 2 decimales
-    let subTotal = parseFloat(cantidad * precio).toFixed(2); // Subtotal = cantidad * precio
-    let iva = parseFloat(subTotal * 0.15).toFixed(2); // IVA = 15% del subtotal ajustado a 2 decimales
-    let total = parseFloat(subTotal + iva).toFixed(2); // Total = subtotal + iva ajustado a 2 decimales
+    // Helper para redondear a 2 decimales manteniendo tipo Number
+    const round2 = v => Math.round(v * 100) / 100;
+
+    // Valores numéricos (se formatean sólo al construir la trama)
+    const cantidad = fakerES.number.int({ min: 1, max: 20 }); // cantidad entera entre 1 y 20
+    const precio = Number(fakerES.commerce.price({ min: 1, max: 200 })); // precio entre 1 y 200
+
+    const subTotal = round2(cantidad * precio);
+    const iva = round2(subTotal * 0.15); // 15% IVA
+    const total = round2(subTotal + iva);
+
 
     this.orden = orden.toString().padStart(4, '0'); // 4 caracteres para el orden del item
-    this.codigo = fakerES.string.alphanumeric(5).toUpperCase().slice(0, 5).padStart(5); // 5 caracteres para el codigo del producto
-    this.producto = fakerES.commerce.product().slice(0, 20).padStart(20); // 20 caracteres para el nombre del producto
-    this.productoNombre = fakerES.commerce.product().slice(0, 20).padStart(20); // 20 caracteres para el nombre del producto
-    this.cantidad = cantidad.toString().padStart(15, '0'); // Rellena la cantidad a la izquierda con ceros hasta 15 caracteres
-    this.precio = precio.toString().replace('.', '').padStart(15, '0'); // Rellena el precio a la izquierda con ceros hasta 15 caracteres sin el punto decimal
-    this.subTotal = subTotal.toString().replace('.', '').padStart(15, '0'); // Rellena el subtotal a la izquierda con ceros hasta 15 caracteres sin el punto decimal
-    this.iva = iva.toString().replace('.', '').padStart(15, '0'); // Rellena el iva a la izquierda con ceros hasta 15 caracteres sin el punto decimal
-    this.total = total.toString().replace('.', '').padStart(15, '0'); // Rellena el total a la izquierda con ceros hasta 15 caracteres sin el punto decimal
+    this.codigo = fakerES.string.alphanumeric(5).toUpperCase().slice(0, 5).padEnd(5); // 5 caracteres para el codigo del producto
+    this.producto = fakerES.commerce.product().slice(0, 20).padEnd(20); // 20 caracteres para el nombre del producto
+    this.productoNombre = fakerES.commerce.product().slice(0, 20).padEnd(20); // 20 caracteres para el nombre del producto
+    // Formateamos con 2 decimales y removemos el separador decimal antes de rellenar
+    this.cantidad = cantidad.toFixed(2).replace('.', '').padStart(15, '0');
+    this.precio = precio.toFixed(2).replace('.', '').padStart(15, '0');
+    this.subTotal = subTotal.toFixed(2).replace('.', '').padStart(15, '0');
+    this.iva = iva.toFixed(2).replace('.', '').padStart(15, '0');
+    this.total = total.toFixed(2).replace('.', '').padStart(15, '0');
 
     this._printData(logLocation); // Imprime los datos del item
   };

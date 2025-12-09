@@ -57,11 +57,11 @@ class Transaccion {
 
   getDatosFactura(){
     /* Ejemplo trama de consulta de una factura:
-     *  2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed9599640000000123
+     *  2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
      * Extrae los datos de la factura
-     * 0000000123 es el numero de factura
+     * 002-003-000004743 es el numero de factura
      */
-    let factura = new Factura(this.datos.substring(0, 10)); // 0000000123
+    let factura = new Factura(this.datos.substring(0, 17)); // 002-003-000004743
     factura.consultar(); // Consulta los datos de la factura
     let datosFactura = factura.getTrama(); // Obtiene la trama de la factura
     this.cabecera.codigoRespuesta = '0000'; // Código de respuesta exitoso

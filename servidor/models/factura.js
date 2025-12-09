@@ -11,7 +11,7 @@ class Factura {
   /* Recibe la trama completa */
   constructor(trama) {
     let logLocation = `Factura::${this.constructor.name}`;
-    this.nro = trama.substring(0, 10); // 10 caracteres para el numero de factura
+    this.nro = trama.substring(0, 17); // 17 caracteres para el número de factura
     this.cliente = new Cliente(fakerES.string.numeric(10)); // Crea un cliente con un ID aleatorio
     this.detalleItems = []; // Array para almacenar los items de la factura
     /* Imprime los datos de la factura */
@@ -30,9 +30,9 @@ class Factura {
   /* Metodo que genera la trama de la factura */
   /* Retorna la trama completa de la factura */
   /* Formato:
-   | NRO(10) | CLIENTE(234) | DETALLE_ITEMS(10 * 100) |
+   | NRO(17) | CLIENTE(234) | DETALLE_ITEMS(10 * 100) |
   */
-  /* retorna un total de 10 + 234 + 1240 = 1484 caracteres */
+  /* retorna un total de 17 + 234 + 1240 = 1491 caracteres */
 
   getTrama(){
     return `${this.nro}${this.cliente.getTrama()}${this.generarDetalle()}`;

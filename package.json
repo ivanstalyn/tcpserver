@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "nodemon servidor/app.js",
     "start": "node --tls-cipher-list='DEFAULT:!DH' servidor/app.js",
-    "lint": "eslint --fix --ignore-path .gitignore ."
+    "lint": "eslint --fix --ignore-path .gitignore .",
+    "test": "jest --runInBand --detectOpenHandles"
   },
   "keywords": [],
   "author": "Iván Muela",
@@ -23,11 +24,22 @@
   },
   "devDependencies": {
     "@babel/eslint-parser": "^7.16.3",
-    "@types/jest": "^27.0.2",
+    "@babel/preset-env": "^7.28.5",
+    "@types/jest": "^27.5.2",
+    "babel-jest": "^30.2.0",
     "eslint": "^8.3.0",
     "eslint-config-strongloop": "^2.1.0",
     "eslint-plugin-jest": "^25.3.0",
     "husky": "^7.0.4",
+    "jest": "^29.7.0",
     "nodemon": "^3.0.1"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.jsx?$": "babel-jest"
+    },
+    "transformIgnorePatterns": [
+      "/node_modules/(?!(?:@faker-js/faker)/)"
+    ]
   }
 }

@@ -14,7 +14,7 @@ Ejemplo de transacción de consulta de un cliente:
 
 Ejemplo de transacción de consulta de una factura:
 
-    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
+    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
 
 
 ## Cómo probar localmente
@@ -44,7 +44,7 @@ Nota: Si no dispone de `nc`, puede usar `socat` u otra herramienta de cliente TC
 
 - Consulta de factura (ejemplo):
 
-    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
+    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
 
 ---
 
@@ -177,13 +177,13 @@ Las tramas de entrada contienen la cabecera (58 chars) seguida de los datos espe
          - Observación: en el ejemplo real hay dígitos adicionales al final; la implementación en `Transaccion` toma `this.datos = trama.substring(58)` y luego en `getDatoscliente()` usa `this.datos.substring(0, 10)` para construir el `Cliente`.
 
     2) Transacción `0002` — Consulta de factura
-         - Datos esperados: Número de factura — 10 caracteres
-         - Longitud mínima total de la trama de entrada: 58 + 10 = 68 caracteres
+         - Datos esperados: Número de factura — 17 caracteres
+         - Longitud mínima total de la trama de entrada: 58 + 17 = 75 caracteres
          - Ejemplo (entrada):
 
-             2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed95996470000000123
+             2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
 
-         - Observación: `Transaccion` extrae los primeros 10 caracteres de `datos` para crear `Factura`.
+         - Observación: `Transaccion` extrae los primeros 17 caracteres de `datos` para crear `Factura`.
 
 ### C) Tramas de respuesta
 
@@ -211,11 +211,11 @@ Las respuestas se construyen concatenando `cabecera.getTrama()` (58 chars) más 
          - `tipoTransaccion` se cambia a `2002` (código de respuesta para factura).
      - Payload: `Factura.getTrama()` — 1484 caracteres.
          - Detalle:
-             - NRO: 10
+             - NRO: 17
              - CLIENTE: 234 (ver arriba)
              - DETALLE_ITEMS: 10 items * 124 chars = 1240
-         - Total payload factura = 10 + 234 + 1240 = 1484
-     - Longitud total respuesta factura = 58 (cabecera) + 1484 = 1542 caracteres
+         - Total payload factura = 17 + 234 + 1240 = 1491
+     - Longitud total respuesta factura = 58 (cabecera) + 1491 = 1549 caracteres
 
 ### D) Respuesta en caso de error o transacción no soportada
 
@@ -224,9 +224,10 @@ Las respuestas se construyen concatenando `cabecera.getTrama()` (58 chars) más 
 
 ### E) Resumen de tamaños
 
-- Trama de entrada mínima (ambos tipos): 68 chars (58 cabecera + 10 dato clave)
+- Trama de entrada mínima consulta cliente: 68 chars (58 cabecera + 10 dato clave)
 - Respuesta `0001` (cliente): 292 chars
-- Respuesta `0002` (factura): 1542 chars
+- Trama de entrada mínima consulta factura: 75 chars (58 cabecera + 17 dato clave)
+- Respuesta `0002` (factura): 1549 chars
 
 
 
