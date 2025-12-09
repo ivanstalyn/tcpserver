@@ -102,7 +102,7 @@ Esta sección describe los componentes principales que integran la solución `tc
 - Comportamiento:
     - Instancia `Cabecera` con los primeros 58 caracteres.
     - Extrae `datos` desde la posición 58 en adelante.
-    - Según `cabecera.codigoTransaccion` ejecuta:
+    - Según `cabecera.tipoTransaccion` ejecuta:
         - `0001` -> `getDatoscliente()` (genera trama de cliente y responde con código transacción `1001`).
         - `0002` -> `getDatosFactura()` (genera trama de factura y responde con código transacción `2002`).
         - default -> establece `codigoRespuesta = '5555'` y devuelve la cabecera+nulos.
@@ -111,7 +111,7 @@ Esta sección describe los componentes principales que integran la solución `tc
 
 - `cabecera.js`:
     - Representa los primeros 58 caracteres de la trama.
-    - Campos: `fecha(8)`, `hora(6)`, `codigoTransaccion(4)`, `codigoRespuesta(4)`, `idTrx(36)`.
+    - Campos: `fecha(8)`, `hora(6)`, `tipoTransaccion(4)`, `codigoRespuesta(4)`, `trxId(36)`.
     - `getTrama()` devuelve la cabecera formateada (58 caracteres).
 
 - `cliente.js`:
@@ -125,9 +125,81 @@ Esta sección describe los componentes principales que integran la solución `tc
     - Contiene un `cliente` (234 chars) y `detalleItems` con 10 `ItemFactura`.
     - `getTrama()` devuelve NRO(10) + CLIENTE(234) + DETALLE(1240) = 1484 caracteres.
 
+- `transaccion.js`:
+    - Responsabilidad: Analizar la trama entrante, enrutar por tipo de transacción y ensamblar la respuesta (cabecera + payload).
+    - Entrada: `trama` (string) recibida por el socket; la cabecera ocupa los primeros 58 caracteres (`trama.substring(0,58)`) y el resto se guarda en `this.datos`.
+    - Comportamiento clave:
+        - Instancia `Cabecera` con los primeros 58 caracteres y mantiene `this.datos = trama.substring(58)`.
+        - Según `cabecera.tipoTransaccion` enruta la petición:
+            - `0001` -> `getDatoscliente()` usa `this.datos.substring(0,10)` para construir un `Cliente` y responde con `tipoTransaccion='1001'` y `codigoRespuesta='0000'` en éxito.
+            - `0002` -> `getDatosFactura()` usa `this.datos.substring(0,17)` para construir una `Factura` y responde con `tipoTransaccion='2002'` y `codigoRespuesta='0000'` en éxito.
+            - default -> marca error `cabecera.codigoRespuesta='5555'` y devuelve `cabecera.getTrama()+this.datos`.
+        - Para respuestas exitosas concatena `cabecera.getTrama()` + `payload.getTrama()` y escribe la cadena al socket.
+    - Salidas: string (cabecera + payload) listo para enviar por socket.
+    - Consideraciones:
+        - Valida la longitud mínima de `trama` y `this.datos` antes de parsear campos concretos; si faltan datos devuelve error en cabecera.
+        - Delegar la generación de payloads a `Cliente`, `Factura` e `ItemFactura` para mantener responsabilidad única.
+    - Pruebas: construir tramas con cabecera conocida y datos mínimos permite verificar el flujo de enrutamiento y los tipos de transacción en la respuesta.
+  
 - `itemfactura.js`:
     - Representa un item dentro de la factura.
-    - Campos y longitudes fijas; `getTrama()` devuelve 124 caracteres por item.
+        - Campos y longitudes fijas; `getTrama()` devuelve 124 caracteres por item.
+
+        ### Item de factura (detalle de un ItemFactura)
+
+        La especificación siguiente refleja exactamente los campos y longitudes definidos en `servidor/models/itemfactura.js`.
+
+        Formato (orden y longitud):
+        - `ORDEN` (4) — `this.orden` : orden del item, formato string con padding por la izquierda (ej. "0001").
+        - `CODIGO` (5) — `this.codigo` : código alfanumérico del producto (5 chars, padded a la derecha).
+        - `PRODUCTO` (20) — `this.producto` : nombre del producto (20 chars, padded a la derecha).
+        - `PRODUCTO_NOMBRE` (20) — `this.productoNombre` : nombre alternativo/doble del producto (20 chars, padded a la derecha).
+        - `CANTIDAD` (15) — `this.cantidad` : cantidad formateada con 2 decimales, el punto decimal se elimina y se left-pad con ceros hasta 15 caracteres. Ej: cantidad 2.50 => "000000000000250" (representación sin punto).
+        - `PRECIO` (15) — `this.precio` : precio unitario con 2 decimales, punto eliminado y left-pad con ceros hasta 15 chars.
+        - `SUBTOTAL` (15) — `this.subTotal` : subtotal (cantidad * precio) con 2 decimales, punto eliminado y left-pad con ceros hasta 15 chars.
+        - `IVA` (15) — `this.iva` : impuesto calculado (15 chars, formato igual a los anteriores: 2 decimales, sin punto, padded con ceros a la izquierda).
+        - `TOTAL` (15) — `this.total` : total del item (15 chars, mismo formato que `SUBTOTAL`).
+
+        Suma de longitudes: 4 + 5 + 20 + 20 + 15 + 15 + 15 + 15 + 15 = 124 caracteres por item.
+
+        Notas implementacionales (desde el código):
+        - `orden` se construye con `orden.toString().padStart(4, '0')`.
+        - `codigo` usa `fakerES.string.alphanumeric(5).toUpperCase().slice(0,5).padEnd(5)`.
+        - `producto` y `productoNombre` usan `fakerES.commerce.product()` truncado a 20 chars y `padEnd(20)`.
+        - Los campos numéricos (`cantidad`, `precio`, `subTotal`, `iva`, `total`) se formatean con `toFixed(2)`, se elimina el punto decimal con `replace('.', '')` y luego `padStart(15, '0')`.
+
+        Ejemplo realista (valores humanos) y su correspondencia en trama:
+
+        - Valores humanos:
+
+            {
+              "orden": "0001",
+              "codigo": "A1B2C",
+              "producto": "Disco SSD 1TB      ",
+              "productoNombre": "Disco SSD 1TB      ",
+              "cantidad": 2.5,
+              "precio": 123.45,
+              "subTotal": 308.62,
+              "iva": 46.29,
+              "total": 354.91
+            }
+
+        - Trama concatenada (124 chars) — cómo se codifican los numéricos:
+
+            ORDEN(4) = "0001"
+            CODIGO(5) = "A1B2C"
+            PRODUCTO(20) = "Disco SSD 1TB      "
+            PRODUCTO_NOMBRE(20) = "Disco SSD 1TB      "
+            CANTIDAD(15) = cantidad.toFixed(2) -> "2.50" -> remove '.' -> "250" -> padStart(15,'0') -> "000000000000250"
+            PRECIO(15) = "000000000012345"  // 123.45 -> "12345" -> padded
+            SUBTOTAL(15) = "000000000030862" // 308.62 -> "30862"
+            IVA(15) = "000000000004629" // 46.29 -> "4629"
+            TOTAL(15) = "000000000035491" // 354.91 -> "35491"
+
+        - Trama ejemplo (visual):
+
+            0001A1B2CDisco SSD 1TB      Disco SSD 1TB      000000000000250000000000012345000000000030862000000000004629000000000035491
+
 
 ### 5) Helpers
 
@@ -165,7 +237,7 @@ Esta sección describe los componentes principales que integran la solución `tc
 2. `server.js` acepta una conexión TCP.
 3. Cliente envía una `trama` en una línea.
 4. `socket.on('data')` crea `Transaccion(trama)`.
-5. `Transaccion` usa `Cabecera` para leer `codigoTransaccion` y enruta a `Cliente` o `Factura`.
+5. `Transaccion` usa `Cabecera` para leer `tipoTransaccion` y enruta a `Cliente` o `Factura`.
 6. Se genera una `trama` de respuesta y se escribe de vuelta al socket.
 
 
