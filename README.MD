@@ -1,44 +1,64 @@
-# Documentación del servidor TCP (varios-ismf/tcpserver)
+# Documentación del servidor TCP
+Descripción, formato de tramas, ejemplos y guía rápida para ejecutar y probar el servicio TCP incluido en este repositorio.
 
-Esta documentación describe el formato de las transacciones y cómo probar el servidor usando los ejemplos incluidos en este archivo.
+---
 
 ## Resumen
 
-El servidor acepta mensajes de transacción en una única línea de texto con formato fijo. Cada mensaje es una cadena numérica larga que representa diferentes campos concatenados. Los ejemplos provistos muestran dos tipos principales de transacción: consulta de cliente y consulta de factura.
+Servidor TCP de ejemplo que genera respuestas para consultas de clientes y facturas. Acepta tramas con una cabecera fija (58 caracteres) seguida de datos específicos. Soporta respuestas en dos formatos:
+
+- Tramas de tamaño fijo (getTrama): campos con ancho fijo.
+- Tramas de tamaño variable (getTramaVariable): cada campo va precedido por un prefijo de longitud de 3 dígitos (ej. `005Juan`).
+
+Modelos principales: Cabecera, Cliente, Factura, ItemFactura y Transaccion (encargada de enrutar y generar respuestas).
+
+---
 
 ## Ejemplos
 
-Ejemplo de transacción de consulta de un cliente:
+Ejemplo de transacción de consulta de un cliente (campos fijos):
 
-    2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
+    2025111921570800019999aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678
 
-Ejemplo de transacción de consulta de una factura:
+Ejemplo de transacción de consulta de un cliente (campos variables):
 
-    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
+    2025111921570890019999aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678
 
+Ejemplo de transacción de consulta de una factura (campos fijos):
+
+    2025111921570800029999aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-000004743
+
+Ejemplo de transacción de consulta de una factura (campos variables):
+
+    2025111921570890029999aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-000004743
+
+
+---
 
 ## Cómo probar localmente
 
-1. Abrir un terminal y situarse en el directorio del proyecto:
+1. Abrir terminal y situarse en el directorio del proyecto:
 
 ```bash
 cd ~/Documentos/desarrollo/varios-ismf/tcpserver
 ```
 
-2. Enviar un mensaje de prueba al servidor (suponiendo que el servidor escucha en localhost:12345). Reemplace el puerto si es distinto.
+2. Instalar dependencias:
 
 ```bash
-# Ejemplo usando netcat (nc).
-echo -n "2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936" | nc localhost 12345
+npm ci
 ```
 
-3. Observar la respuesta del servidor en la consola o en los logs del proyecto.
+3. Enviar un mensaje de prueba al servidor (ejemplo con `nc`, sustituir puerto si procede):
 
-Nota: Si no dispone de `nc`, puede usar `socat` u otra herramienta de cliente TCP.
+```bash
+nc localhost 9000
+2025111921570800019999aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678
+```
+
+---
 
 ## Desarrollo y pruebas
-
-Sigue estos pasos para preparar el entorno de desarrollo, ejecutar el linter y los tests locales.
 
 1. Instalar dependencias:
 
@@ -46,288 +66,265 @@ Sigue estos pasos para preparar el entorno de desarrollo, ejecutar el linter y l
 npm install
 ```
 
-2. Ejecutar linter (aplica correcciones automáticas cuando sea posible):
+2. Ejecutar linter:
 
 ```bash
 npm run lint
 ```
 
-3. Ejecutar tests unitarios (Jest + babel-jest se usan para transformar dependencias ESM como `@faker-js/faker`):
+3. Ejecutar tests:
 
 ```bash
 npm test
 ```
 
 Notas:
-- En este proyecto se configuró `babel-jest` para permitir que Jest transforme módulos ESM (por ejemplo `@faker-js/faker`).
-- Se eliminó el mock manual de `@faker-js/faker` y ahora las pruebas usan la versión real transformada por Babel.
-- Si necesitas volver al mock manual por razones de estabilidad en tests, revisa el historial de git para recuperarlo.
-
-
-## Mensajes de ejemplo para pruebas
-
-- Consulta de cliente (ejemplo):
-
-    2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
-
-- Consulta de factura (ejemplo):
-
-    2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
+- `@faker-js/faker` se usa en runtime y en tests; la configuración de test permite transformar ESM si es necesario.
+- Se eliminó el mock manual de faker en favor de la versión real transformada por Jest/Babel.
 
 ---
 
+## One-liners útiles (referencia)
+
+- Fecha yyyyMMdd:
+
+```javascript
+const yyyyMMdd = (()=>{const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`})();
+```
+
+- Hora HHmmss:
+
+```javascript
+const HHmmss = (()=>{const d=new Date();return `${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}${String(d.getSeconds()).padStart(2,'0')}`})();
+```
+
+---
+
+## Contenedorización
+
+Containerfile incluido (base: `registry.access.redhat.com/ubi8/nodejs-24-minimal`).
+
+Construir imagen:
+
+```bash
+podman build -f Containerfile -t tcpserver .
+# o
+docker build -f Containerfile -t tcpserver .
+```
+
+Ejecutar:
+
+```bash
+podman run --rm -p 3000:3000 -e FACTURA_MIN=1 -e FACTURA_MAX=10 tcpserver
+```
+
+---
 
 ## Descripción técnica de componentes
 
-Esta sección describe los componentes principales que integran la solución `tcpserver`, sus responsabilidades y cómo interactúan.
+Resumen de responsabilidades y comportamientos por componente.
 
-### 1) `app.js` (punto de entrada)
+### 1) app.js
+- Carga variables de entorno (dotenv) y arranca el servidor TCP.
+- Lee `PORT`, `HOST` y demás variables de configuración.
 
-- Responsabilidad: Cargar variables de entorno y arrancar la instancia del servidor TCP.
-- Comportamiento: Lee `PORT` y `HOST` desde `.env` (vía `dotenv`), instancia `TCPServer` y llama `start()`.
+### 2) servidor/models/server.js (TCPServer)
+- Crea y gestiona el servidor TCP (`net.createServer()`).
+- Maneja eventos globales (`connection`, `error`, `close`) y por socket (`data`, `drain`, `end`, `error`).
+- Mantiene `connections` (Set) y asigna `clientId`.
+- Al recibir datos crea `Transaccion(trama)` y escribe la respuesta al socket.
+- Todas las tramas de respuesta tienen como delimitador el caracter `\x03` (End Of Text - EOT).
 
-### 2) `servidor/models/server.js` (TCPServer)
+### 3) servidor/models/transaccion.js
+- Parsea la trama entrante: instancia `Cabecera(trama.substring(0,58))` y guarda `this.datos = trama.substring(58)`.
+- Enruta según `cabecera.tipoTransaccion`:
+  - `0001` → consulta cliente (fijo) → respuesta `1001` + cliente fijo.
+  - `9001` → consulta cliente (variable) → respuesta `9101` + cliente variable.
+  - `0002` → consulta factura (fijo) → respuesta `2002` + factura fija.
+  - `9002` → consulta factura (variable) → respuesta `9202` + factura variable.
+  - default → marca error (`codigoRespuesta = '9999'` o similar) y devuelve cabecera + datos sin procesar.
+- Recomendación: validar longitud mínima de la trama y datos antes de extractar campos; devolver cabecera con error si faltan datos.
 
-- Responsabilidad: Crear y gestionar el servidor TCP, manejar conexiones y el ciclo de vida de sockets.
-- Funcionalidades clave:
-    - Crea el servidor TCP con `net.createServer()`.
-    - Maneja eventos: `connection`, `error`, `close`.
-    - Para cada socket: `data` (recibe trama), `drain`, `end`, `error`.
-    - Mantiene `connections` (Set) y asigna un `clientId` incremental.
-    - Al recibir `data` crea un objeto `Transaccion` y escribe la respuesta en el socket.
-
-### 3) `servidor/models/transaccion.js` (Procesamiento de trama)
-
-- Responsabilidad: Analizar la trama entrante, enrutar por tipo de transacción y generar la respuesta adecuada.
-- Comportamiento:
-    - Instancia `Cabecera` con los primeros 58 caracteres.
-    - Extrae `datos` desde la posición 58 en adelante.
-    - Según `cabecera.tipoTransaccion` ejecuta:
-        - `0001` -> `getDatoscliente()` (genera trama de cliente y responde con código transacción `1001`).
-        - `0002` -> `getDatosFactura()` (genera trama de factura y responde con código transacción `2002`).
-        - default -> establece `codigoRespuesta = '5555'` y devuelve la cabecera+nulos.
-
-### 4) Modelos de dominio (`servidor/models/*.js`)
-
-- `cabecera.js`:
-    - Representa los primeros 58 caracteres de la trama.
-    - Campos: `fecha(8)`, `hora(6)`, `tipoTransaccion(4)`, `codigoRespuesta(4)`, `trxId(36)`.
-    - `getTrama()` devuelve la cabecera formateada (58 caracteres).
-
-- `cliente.js`:
-    - Representa la información del cliente.
-    - Entrada: ID de cliente (10 caracteres) extraído desde la trama.
-    - `consultar()` genera datos aleatorios con `@faker-js/faker` y construye una `trama` de 234 caracteres con campos: ID(10), NOMBRE(20), APELLIDO(20), CELULAR(14), DIRECCION(100), CIUDAD(20), EMAIL(50).
-
-- `factura.js`:
-    - Representa la factura.
-    - Entrada: número de factura (10 caracteres).
-    - Contiene un `cliente` (234 chars) y `detalleItems` con 10 `ItemFactura`.
-    - `getTrama()` devuelve NRO(10) + CLIENTE(234) + DETALLE(1240) = 1484 caracteres.
-
-- `transaccion.js`:
-    - Responsabilidad: Analizar la trama entrante, enrutar por tipo de transacción y ensamblar la respuesta (cabecera + payload).
-    - Entrada: `trama` (string) recibida por el socket; la cabecera ocupa los primeros 58 caracteres (`trama.substring(0,58)`) y el resto se guarda en `this.datos`.
-    - Comportamiento clave:
-        - Instancia `Cabecera` con los primeros 58 caracteres y mantiene `this.datos = trama.substring(58)`.
-        - Según `cabecera.tipoTransaccion` enruta la petición:
-            - `0001` -> `getDatoscliente()` usa `this.datos.substring(0,10)` para construir un `Cliente` y responde con `tipoTransaccion='1001'` y `codigoRespuesta='0000'` en éxito.
-            - `0002` -> `getDatosFactura()` usa `this.datos.substring(0,17)` para construir una `Factura` y responde con `tipoTransaccion='2002'` y `codigoRespuesta='0000'` en éxito.
-            - default -> marca error `cabecera.codigoRespuesta='5555'` y devuelve `cabecera.getTrama()+this.datos`.
-        - Para respuestas exitosas concatena `cabecera.getTrama()` + `payload.getTrama()` y escribe la cadena al socket.
-    - Salidas: string (cabecera + payload) listo para enviar por socket.
-    - Consideraciones:
-        - Valida la longitud mínima de `trama` y `this.datos` antes de parsear campos concretos; si faltan datos devuelve error en cabecera.
-        - Delegar la generación de payloads a `Cliente`, `Factura` e `ItemFactura` para mantener responsabilidad única.
-    - Pruebas: construir tramas con cabecera conocida y datos mínimos permite verificar el flujo de enrutamiento y los tipos de transacción en la respuesta.
-  
-- `itemfactura.js`:
-    - Representa un item dentro de la factura.
-        - Campos y longitudes fijas; `getTrama()` devuelve 124 caracteres por item.
-
-        ### Item de factura (detalle de un ItemFactura)
-
-        La especificación siguiente refleja exactamente los campos y longitudes definidos en `servidor/models/itemfactura.js`.
-
-        Formato (orden y longitud):
-        - `ORDEN` (4) — `this.orden` : orden del item, formato string con padding por la izquierda (ej. "0001").
-        - `CODIGO` (5) — `this.codigo` : código alfanumérico del producto (5 chars, padded a la derecha).
-        - `PRODUCTO` (20) — `this.producto` : nombre del producto (20 chars, padded a la derecha).
-        - `PRODUCTO_NOMBRE` (20) — `this.productoNombre` : nombre alternativo/doble del producto (20 chars, padded a la derecha).
-        - `CANTIDAD` (15) — `this.cantidad` : cantidad formateada con 2 decimales, el punto decimal se elimina y se left-pad con ceros hasta 15 caracteres. Ej: cantidad 2.50 => "000000000000250" (representación sin punto).
-        - `PRECIO` (15) — `this.precio` : precio unitario con 2 decimales, punto eliminado y left-pad con ceros hasta 15 chars.
-        - `SUBTOTAL` (15) — `this.subTotal` : subtotal (cantidad * precio) con 2 decimales, punto eliminado y left-pad con ceros hasta 15 chars.
-        - `IVA` (15) — `this.iva` : impuesto calculado (15 chars, formato igual a los anteriores: 2 decimales, sin punto, padded con ceros a la izquierda).
-        - `TOTAL` (15) — `this.total` : total del item (15 chars, mismo formato que `SUBTOTAL`).
-
-        Suma de longitudes: 4 + 5 + 20 + 20 + 15 + 15 + 15 + 15 + 15 = 124 caracteres por item.
-
-        Notas implementacionales (desde el código):
-        - `orden` se construye con `orden.toString().padStart(4, '0')`.
-        - `codigo` usa `fakerES.string.alphanumeric(5).toUpperCase().slice(0,5).padEnd(5)`.
-        - `producto` y `productoNombre` usan `fakerES.commerce.product()` truncado a 20 chars y `padEnd(20)`.
-        - Los campos numéricos (`cantidad`, `precio`, `subTotal`, `iva`, `total`) se formatean con `toFixed(2)`, se elimina el punto decimal con `replace('.', '')` y luego `padStart(15, '0')`.
-
-        Ejemplo realista (valores humanos) y su correspondencia en trama:
-
-        - Valores humanos:
-
-            {
-              "orden": "0001",
-              "codigo": "A1B2C",
-              "producto": "Disco SSD 1TB      ",
-              "productoNombre": "Disco SSD 1TB      ",
-              "cantidad": 2.5,
-              "precio": 123.45,
-              "subTotal": 308.62,
-              "iva": 46.29,
-              "total": 354.91
-            }
-
-        - Trama concatenada (124 chars) — cómo se codifican los numéricos:
-
-            ORDEN(4) = "0001"
-            CODIGO(5) = "A1B2C"
-            PRODUCTO(20) = "Disco SSD 1TB      "
-            PRODUCTO_NOMBRE(20) = "Disco SSD 1TB      "
-            CANTIDAD(15) = cantidad.toFixed(2) -> "2.50" -> remove '.' -> "250" -> padStart(15,'0') -> "000000000000250"
-            PRECIO(15) = "000000000012345"  // 123.45 -> "12345" -> padded
-            SUBTOTAL(15) = "000000000030862" // 308.62 -> "30862"
-            IVA(15) = "000000000004629" // 46.29 -> "4629"
-            TOTAL(15) = "000000000035491" // 354.91 -> "35491"
-
-        - Trama ejemplo (visual):
-
-            0001A1B2CDisco SSD 1TB      Disco SSD 1TB      000000000000250000000000012345000000000030862000000000004629000000000035491
-
+### 4) servidor/models/*.js (modelos)
+- `cabecera.js`: representa la cabecera (58 chars). `getTrama()` devuelve la cabecera formada.
+- `cliente.js`: maneja ID (10 chars), `consultar()` genera datos con faker, `getTrama()` y `getTramaVariable()` devuelven payloads correspondientes. `getTramaVariable()` usa `withLenPrefix` para prefijos a 3 dígitos y evita mutar innecesariamente propiedades.
+- `factura.js`: recibe NRO (17 chars), contiene `cliente` y `detalleItems`. `generarDetalle()` produce 10 items fijos; `generarDetalleVariable()` produce n items aleatorios entre `FACTURA_MIN` y `FACTURA_MAX` usando `crypto.randomInt`.
+- `itemfactura.js`: representa un item; `getTrama()` devuelve 124 chars por item con formatos y paddings específicos.
 
 ### 5) Helpers
-
-- `servidor/helpers/logger.js`:
-    - Wrapper sobre `log4js` con niveles personalizados (`TRACE`, `DEBUG`, `INFO`, ...).
-    - Permite cambiar el nivel desde `process.env.LOG_LEVEL`.
-    - Provee funciones: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, `mark`, `logCatch`.
-
+- `servidor/helpers/logger.js`: wrapper sobre log4js; nivel configurable por `LOG_LEVEL`.
 - `servidor/helpers/util.js`:
-    - Función `delay(ms)` que retorna una promesa y simula latencia.
-    - Si `DELAY_RANDOM_ENABLED` está en `true`, usa `DELAY_MIN`/`DELAY_MAX` para calcular un retraso aleatorio.
+  - `withLenPrefix(value, width = 3)`: normaliza, calcula longitud y devuelve `len.padStart(width,'0') + value`.
+  - `delay(ms)` y lógica de delays aleatorios controlada por `DELAY_RANDOM_ENABLED`, `DELAY_MIN`, `DELAY_MAX`.
 
-### 6) Configuración y despliegue
+---
 
-- Variables de entorno principales (archivo `.env`):
-    - `LOG_LEVEL` — nivel de logs (ej. TRACE, INFO).
-    - `PORT` — puerto en el que escucha el servidor (ej. 9000).
-    - `HOST` — host a escuchar (ej. 127.0.0.1).
-    - `DELAY_RANDOM_ENABLED` — si se habilita delay aleatorio (`"true"`/`"false"`).
-    - `DELAY_MAX`, `DELAY_MIN` — límites en ms para delay aleatorio.
+## Especificación detallada de campos y longitudes (actualizada)
 
-- `container-compose.yml` expone `${PORT}` y pasa las variables de entorno a la imagen.
+Especificación precisa inferida del código. Offsets 0-based; longitudes en caracteres.
 
-### 7) Dependencias principales
-
-- En `package.json` las dependencias usadas en runtime:
-    - `@faker-js/faker` — generación de datos de ejemplo.
-    - `dotenv` — carga variables de entorno.
-    - `log4js` — logging.
-    - `uuid` — generación de uuidV4.
-
-### 8) Flujo de una petición (resumen)
-
-1. `app.js` arranca la aplicación.
-2. `server.js` acepta una conexión TCP.
-3. Cliente envía una `trama` en una línea.
-4. `socket.on('data')` crea `Transaccion(trama)`.
-5. `Transaccion` usa `Cabecera` para leer `tipoTransaccion` y enruta a `Cliente` o `Factura`.
-6. Se genera una `trama` de respuesta y se escribe de vuelta al socket.
-
-
-## Especificación detallada de campos y longitudes
-
-La siguiente especificación recoge los campos y longitudes tal y como se infieren del código fuente (`cabecera.js`, `cliente.js`, `factura.js`, `itemfactura.js`, `transaccion.js`). Los offsets son 0-based y las longitudes son en caracteres (bytes si se usa ASCII/UTF-8 sin multibyte).
-
-NOTA: El servidor trata las tramas como cadenas de texto con padding mediante espacios en algunos casos; los ejemplos iniciales están compuestos por dígitos.
-
-### A) Cabecera (común a todas las tramas)
+### A) Cabecera (común)
 - Longitud total: 58 caracteres
-- Campos (offset:longitud — descripción):
-    - 0:8 — `fecha` (YYYYMMDD) — 8 chars
-    - 8:6 — `hora` (hhmmss) — 6 chars
-    - 14:4 — `tipoTransaccion` — 4 chars (ej. `0001`, `0002`)
-    - 18:4 — `codigoRespuesta` — 4 chars (retorno; por ejemplo `0000` o `5555`)
-    - 22:36 — `trxId` — 36 chars (identificador único de transacción uuidv4)
+- Campos:
+  - 0:8  — `fecha` (YYYYMMDD) — 8
+  - 8:6  — `hora` (HHmmss) — 6
+  - 14:4 — `tipoTransaccion` — 4
+  - 18:4 — `codigoRespuesta` — 4
+  - 22:36 — `trxId` (uuid v4) — 36
 
 Ejemplo (58 chars):
 
-    20251119 215708 0001 9999 faf89fc4-22a8-43a9-9a69-ebf1ed959964
+    2025111921570800019999aa93d406-9cb2-4e94-94ba-2b1897e97a55
 
 ### B) Trama de entrada (solicitud)
+Formato general: `CABECERA(58)` + `DATOS(...)`
 
-Las tramas de entrada contienen la cabecera (58 chars) seguida de los datos específicos de la transacción.
+- `0001` — Consulta de cliente:
+  - Datos esperados: ID cliente — 10 chars
+  - Longitud mínima entrada: 58 + 10 = 68
+  - ejemplo: `2025111921570800019999aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678`
 
-- Formato general: `CABECERA(58)` + `DATOS(...)`
+- `9001` — Consulta de cliente (respuesta tamaño variable):
+  - Datos esperados: ID cliente — 10 chars
+  - Longitud mínima entrada: 58 + 10 = 68
+  - ejemplo: `2025111921570890019999aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678`
 
-- Para los tipos soportados en el código:
-    1) Transacción `0001` — Consulta de cliente
-         - Datos esperados: ID de cliente — 10 caracteres
-         - Longitud mínima total de la trama de entrada: 58 + 10 = 68 caracteres
-         - Ejemplo (entrada):
-
-             2025111921570800019999faf89fc4-22a8-43a9-9a69-ebf1ed9599641712705936
-
-         - Observación: en el ejemplo real hay dígitos adicionales al final; la implementación en `Transaccion` toma `this.datos = trama.substring(58)` y luego en `getDatoscliente()` usa `this.datos.substring(0, 10)` para construir el `Cliente`.
-
-    2) Transacción `0002` — Consulta de factura
-         - Datos esperados: Número de factura — 17 caracteres
-         - Longitud mínima total de la trama de entrada: 58 + 17 = 75 caracteres
-         - Ejemplo (entrada):
-
-             2025111921570800029999faf89fc4-22a8-43a9-9a69-ebf1ed959964002-003-000004743
-
-         - Observación: `Transaccion` extrae los primeros 17 caracteres de `datos` para crear `Factura`.
+- `0002` — Consulta de factura:
+  - Datos esperados: NRO factura — 17 chars
+  - Longitud mínima entrada: 58 + 17 = 75
+  - ejemplo: `2025111921570800029999aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-000004743`
+  
+- `9002` — Consulta de factura (respuesta tamaño variable):
+  - Datos esperados: NRO factura — 17 chars
+  - Longitud mínima entrada: 58 + 17 = 75
+  - ejemplo: `2025111921570890029999aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-000004743`
 
 ### C) Tramas de respuesta
 
-Las respuestas se construyen concatenando `cabecera.getTrama()` (58 chars) más la `trama` del modelo solicitado.
+Respuestas = `cabecera.getTrama()` (58) + payload.
 
-1) Respuesta a `0001` (cliente)
-     - Cabecera en respuesta:
-         - `codigoRespuesta` se fija a `0000` en caso de éxito.
-         - `tipoTransaccion` se cambia a `1001` (código de respuesta para cliente).
-     - Payload: `Cliente.getTrama()` — 234 caracteres.
-         - Cliente detalle (campos y longitudes):
-             - ID: 10
-             - NOMBRE: 20
-             - APELLIDO: 20
-             - CELULAR: 14
-             - DIRECCION: 100
-             - CIUDAD: 20
-             - EMAIL: 50
-         - Total payload cliente = 234
-     - Longitud total respuesta cliente = 58 (cabecera) + 234 = 292 caracteres
+1) Respuesta a `0001` (cliente fijo)
+- Cabecera: `tipoTransaccion` → `1001`, `codigoRespuesta` → `0000`
+- Payload: `Cliente.getTrama()` — 234 chars
+  - Campos:
+    - ID: 10
+    - NOMBRE: 20
+    - APELLIDO: 20
+    - CELULAR: 14
+    - DIRECCION: 100
+    - CIUDAD: 20
+    - EMAIL: 50
+- Longitud total respuesta = 58 + 234 = 292
+- Ejemplo: 
+```plaintext
+'2025111921570810010000aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678Benjamín            Borrego Urrutia       954 88 56 76Masía Gregorio 20                                                                                   Cartagena           Benjamin_BorregoUrrutia@hotmail.com               '
+```
 
-2) Respuesta a `0002` (factura)
-     - Cabecera en respuesta:
-         - `codigoRespuesta` se fija a `0000` en caso de éxito.
-         - `tipoTransaccion` se cambia a `2002` (código de respuesta para factura).
-     - Payload: `Factura.getTrama()` — 1484 caracteres.
-         - Detalle:
-             - NRO: 17
-             - CLIENTE: 234 (ver arriba)
-             - DETALLE_ITEMS: 10 items * 124 chars = 1240
-         - Total payload factura = 17 + 234 + 1240 = 1491
-     - Longitud total respuesta factura = 58 (cabecera) + 1491 = 1549 caracteres
+2) Respuesta a `9001` (cliente variable)
+- Cabecera: `tipoTransaccion` → `9101`, `codigoRespuesta` → `0000`
+- Payload: `Cliente.getTramaVariable()` — variable
+  - Cada campo (salvo ID fijo de 10 chars) va precedido por prefijo de longitud de 3 dígitos (`NNN`).
+- Ejemplo:
+```plaintext
+'2025111921570891010000aa93d406-9cb2-4e94-94ba-2b1897e97a551712345678003Ana016Montemayor Adame012999 56 95 60026Gran Subida Tomás Pagan, 6005Cádiz031Ana.MontemayorAdame87@gmail.com'
+```
 
-### D) Respuesta en caso de error o transacción no soportada
+3) Respuesta a `0002` (factura fija)
+- Cabecera: `tipoTransaccion` → `2002`, `codigoRespuesta` → `0000`
+- Payload: `Factura.getTrama()` — 1491 chars
+  - Desglose:
+    - NRO: 17
+    - CLIENTE: 234
+    - DETALLE_ITEMS: 10 * 124 = 1240
+- Longitud total respuesta = 58 + 1491 = 1549
+- Ejemplo:
+```plaintext
+'2025111921570820020000aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-0000047434348696954Teresa              Uribe Delrío          987 20 11 01Terrenos Concepción Enríquez 2                                                                      Oviedo              Teresa_UribeDelrio@hotmail.com                    0001JVNSSCoche               Atún                0000000000018000000000000061390000000001105020000000000165750000000001270770002XRRIAMesa                Sopa                0000000000018000000000000024890000000000448020000000000067200000000000515220003DDWXYCamiseta            Pollo               0000000000017000000000000120590000000002050030000000000307500000000002357530004R075AOrdenador           Mesa                0000000000017000000000000062890000000001069130000000000160370000000001229500005LCF5VRaton               Pizza               0000000000015000000000000041850000000000627750000000000094160000000000721910006DMW3URaton               Guantes             00000000000100000000000000673900000000006739000000000001010900000000007749900074SD80Pizza               Coche               0000000000017000000000000192250000000003268250000000000490240000000003758490008LX1HTGorro               Salchichas          0000000000012000000000000111290000000001335480000000000200320000000001535800009V8WCGTeclado             Pescado             0000000000015000000000000196450000000002946750000000000442010000000003388760010M517LGuantes             Queso               000000000000400000000000008049000000000032196000000000004829000000000037025'
+```
 
-- Si `tipoTransaccion` no es reconocido, `Transaccion` establece `cabecera.codigoRespuesta = '5555'` y devuelve `cabecera.getTrama()` concatenada con `this.datos` (sin procesar).
-- Longitud: 58 + longitud de `datos` (dependiente de la entrada). Si la entrada solo lleva 10 bytes de `datos`, la respuesta será 68 caracteres.
+4) Respuesta a `9002` (factura variable)
+- Cabecera: `tipoTransaccion` → `9202`, `codigoRespuesta` → `0000`
+- Payload: `Factura.getTramaVariable()` — variable (NRO + cliente variable + detalle factura variable)
+  - `generarDetalleVariable()` produce n items con `n = crypto.randomInt(min, max + 1)`.
+- Ejemplo:
+```plaintext
+'2025111921570892020000aa93d406-9cb2-4e94-94ba-2b1897e97a55002-003-0000047437519508437009José Luis012Magaña Garay012967 06 65 41027Urbanización Rosa Solano, 7016Collado Villalba032JoseLuis.MaganaGaray@hotmail.com0011005TXGG5007Guantes007Guantes0041300003215004279500341900432140012005EM5GI007Guantes007Pescado00330000475090052252700433790052590600130059AZXP007Toallas007Guantes00370000494000056580000498700057567000140059SSOS009Bicicleta005Bacon004150000516715006250725005376090062883340015005PSTAY005Pollo005Silla00340000510290005411600046174005473340016005IGZNG007Toallas007Guantes004190000513169006250211005375320062877430017005TJVTS005Gorro007Toallas004140000510839006151746005227620061745080018005BOZZQ006Pelota010Salchichas00390000511509006103581005155370061191180019005FYDBG008Ensalada007Toallas0041500004741900611128500516693006127978002100059ZQIO005Bacon005Pizza003800005130390061043120051564700611995900211005K8BDS014Patatas fritas008Ensalada003100004864900486490041297004994600212005A8X0Q004Atún014Patatas fritas004150000434490055173500477600055949500213005JDVXF007Zapatos005Bacon003900005169090061521810052282700617500800214005GUWNR006Pelota005Coche003400005163850056554000498310057537100215005OFKOO005Bacon004Atún004130000422750052957500444360053401100216005T9YAM008Ensalada004Mesa0041100005164190061806090052709100620770000217005YPVZO010Pantalones007Teclado00370000453550053748500456230054310800218005QIPEO005Pizza007Toallas0034000051452900558116004871700566833'
+```
 
-### E) Resumen de tamaños
+### D) ItemFactura tamaño fijo (124 chars por item)
+Campos, longitudes y tipo de dato:
+- ORDEN (4) — texto
+- CODIGO (5) — texto
+- PRODUCTO (20) — texto
+- PRODUCTO_NOMBRE (20) — texto
+- CANTIDAD (15) — numérico
+- PRECIO (15) — numérico
+- SUBTOTAL (15) — numérico
+- IVA (15) — numérico
+- TOTAL (15) — numérico
 
-- Trama de entrada mínima consulta cliente: 68 chars (58 cabecera + 10 dato clave)
-- Respuesta `0001` (cliente): 292 chars
-- Trama de entrada mínima consulta factura: 75 chars (58 cabecera + 17 dato clave)
-- Respuesta `0002` (factura): 1549 chars
+Suma = 124 chars por item.
+
+Formato numérico: valores con 2 decimales, punto eliminado, left-pad con ceros a 15 posiciones.
+
+### E) ItemFactura tamaño variable
+Campos, longitudes y tipo de dato:
+- ORDEN (n) — texto
+- CODIGO (n) — texto
+- PRODUCTO (n) — texto
+- PRODUCTO_NOMBRE (n) — texto
+- CANTIDAD (n) — numérico
+- PRECIO (1) — numérico
+- SUBTOTAL (n) — numérico
+- IVA (n) — numérico
+- TOTAL (n) — numérico
+
+Formato numérico: valores con 2 decimales, punto eliminado, sin padding.
+
+Cada campo va precedido por prefijo de longitud de 3 dígitos. Ejemplo para un campo PRODUCTO_NOMBRE con valor "Atún": `004Atún`
+
+### F) Errores / transacción no soportada
+- Si `tipoTransaccion` desconocido: `cabecera.codigoRespuesta` marcado con `'9999'`.
+
+### G) Resumen rápido de tamaños
+- Entrada mínima consulta cliente: 68 chars
+  - Respuesta `0001` (cliente campos tamaño fijo): 292 chars
+  - Respuesta `9001` (cliente campos tamaño variable): variable
+
+- Entrada mínima consulta factura: 75 chars
+  - Respuesta `0002` (factura campos tamaño fijo): 1549 chars
+  - Respuesta `9002` (factura campos tamaño variable): variable
+
+---
+
+## Variables de entorno relevantes
+
+- PORT: puerto en que escucha el servidor TCP
+- HOST: dirección del servidor
+- LOG_LEVEL: nivel de log (ej. info, debug)
+- FACTURA_MIN — mínimo items por factura (recomendado: entero >= 1)
+- FACTURA_MAX — máximo items por factura (recomendado: entero >= FACTURA_MIN)
+- DELAY_RANDOM_ENABLED: habilita delays aleatorios en respuestas (true/false)
+- DELAY_MIN: tiempo mínimo de delay (en ms)
+- DELAY_MAX: tiempo máximo de delay (en ms)
+- ASYNC: si true, maneja conexiones de forma asíncrona (default: false)
+
+## Cambios recientes relevantes
+
+### versión v1.1
+- parsear variables numéricas con `parseInt(process.env.FACTURA_MIN, 10) || 1` en lugar de usar bitwise OR (`|`) para defaults.
+- Corrección y mejoras en README.MD: 
+  - Ejemplos de tramas de consulta de cliente y factura (tipos `9001` y `9002`) ahora correctamente etiquetados como "respuesta tamaño variable".
+  - Mejora en especificación detallada de campos y longitudes actualizada para reflejar correctamente los formatos de tramas fijas y variables.
+  - Corrección en ejemplos de respuestas variables en README.MD para reflejar el uso correcto de prefijos de longitud de 3 dígitos.
+
+### versión v1.0
+- getTramaVariable añade prefijos de longitud formateados a 3 dígitos (`padStart(3, '0')`) para cada campo; utilizable desde `servidor/helpers/util.js` (`withLenPrefix`).
+- Mejor manejo de valores nulos/undefined y reducción de mutaciones de propiedades al generar tramas variables.
+- `Factura.generarDetalleVariable()` usa `crypto.randomInt(min, max + 1)` para elegir número de items; rango controlado por `FACTURA_MIN` y `FACTURA_MAX`.
+- Containerfile añadido (base: UBI NodeJS 24 minimal).
+- Se proporcionan one-liners de utilidad para fecha (`yyyyMMdd`) y hora (`HHmmss`).
+
 
 
 

@@ -89,7 +89,7 @@ class Factura {
     let logLocation = `Factura::${this.generarDetalleVariable.name}`;
     let respuesta = '';
 
-    const n = crypto.randomInt(process.env.FACTURA_MIN | 1, (process.env.FACTURA_MAX | 1) + 1);
+    const n = crypto.randomInt(parseInt(process.env.FACTURA_MIN, 10) || 1, (parseInt(process.env.FACTURA_MAX, 10) || 1) + 1);
     logger.info(`Número de items: ${n}`, logLocation);
     /* Genera n items de factura */
     for (let index = 1; index <= n; index++) {
