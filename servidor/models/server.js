@@ -36,7 +36,7 @@ class TCPServer {
     socket.on('data', async(data) => {
       let datos = data.toString().trim();
       logger.info(`IN  : '${datos}'`, location);
-
+      logger.info(`IN size  : ${datos.length}`, location);
       let trx = new Transaccion(data.toString());
       let respuesta = trx.getRespuesta();
 
@@ -44,11 +44,12 @@ class TCPServer {
 
       let is_kernel_buffer_full = socket.write(`${respuesta}\x03`);
       logger.info(`OUT : '${respuesta}'`, location);
-      logger.info(`IN size  : ${datos.length}`, location);
       logger.info(`OUT size : ${respuesta.length}`, location);
+
       if (is_kernel_buffer_full) {
         logger.debug('Datos enviados exitosamente desde kernel buffer a cliente.', location);
-        // socket.end();
+        if (process.env.ASYNC === 'false')
+          socket.end();
       } else {
         socket.pause();
       }

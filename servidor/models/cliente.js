@@ -1,5 +1,6 @@
 const { fakerES } = require('@faker-js/faker');
 const logger = require('../helpers/logger');
+const { withLenPrefix } = require('../helpers/util');
 
 /* Clase que representa un cliente */
 class Cliente {
@@ -10,12 +11,13 @@ class Cliente {
 
     let logLocation = `Cliente::${this.constructor.name}`;
     this.id = trama.substring(0, 10); // 10 caracteres para el ID del cliente
-    this.nombre = ''; // Inicializa las demas propiedades vacias
-    this.apellido = ''; // Inicializa las demas propiedades vacias
-    this.direccion = ''; // Inicializa las demas propiedades vacias
-    this.ciudad = ''; // Inicializa las demas propiedades vacias
-    this.celular = ''; // Inicializa las demas propiedades vacias
-    this.email = ''; // Inicializa las demas propiedades vacias
+    // Inicializa las demas propiedades vacias
+    this.nombre = '';
+    this.apellido = '';
+    this.direccion = '';
+    this.ciudad = '';
+    this.celular = '';
+    this.email = '';
     /* Imprime los datos del cliente */
     this._printData(logLocation);
   };
@@ -26,31 +28,58 @@ class Cliente {
   consultar(){
     let logLocation = `Cliente::${this.consultar.name}`;
 
-    this.nombre = fakerES.person.firstName().slice(0, 20).padEnd(20); // Genera un nombre aleatorio
-    this.apellido = fakerES.person.lastName().slice(0, 20).padEnd(20); // Genera un apellido aleatorio
-    this.direccion = fakerES.location.streetAddress().slice(0, 100).padEnd(100); // Genera una direccion aleatoria
-    this.ciudad = fakerES.location.city().slice(0, 20).padEnd(20); // Genera una ciudad aleatoria y rellena a la izquierda con espacios
-    this.celular = fakerES.phone.number({style: 'national'}).slice(0, 14).padStart(14); // Genera un numero de celular aleatorio y rellena a la izquierda con espacios
-    this.email = fakerES.internet.email({firstName: this.nombre.trim(), lastName: this.apellido.trim()}).slice(0, 50).padEnd(50); // Genera un email aleatorio y rellena a la izquierda con espacios
+    this.nombre = fakerES.person.firstName(); // Genera un nombre aleatorio
+    this.apellido = fakerES.person.lastName(); // Genera un apellido aleatorio
+    this.direccion = fakerES.location.streetAddress(); // Genera una direccion aleatoria
+    this.ciudad = fakerES.location.city(); // Genera una ciudad aleatoria
+    this.celular = fakerES.phone.number({style: 'national'}); // Genera un número de celular aleatorio
+    this.email = fakerES.internet.email({firstName: this.nombre.trim(), lastName: this.apellido.trim()}); // Genera un email aleatorio
     /* Imprime los datos del cliente */
     this._printData(logLocation);
 
   };
 
-  /* Metodo que genera la trama del cliente */
+  /* Metodo que genera la trama fija del cliente */
   /* Retorna la trama completa del cliente */
   /* Formato:
    | ID(10) | NOMBRE(20) | APELLIDO(20) | CELULAR(14) | DIRECCION(100) | CIUDAD(20) | EMAIL(50) |
   */
   /* retorna un total de 234 caracteres */
   getTrama(){
-    logger.debug(`ID        [${this.id.length}]: '${this.id}'`);
-    logger.debug(`NOMBRE    [${this.nombre.length}]: '${this.nombre}'`);
-    logger.debug(`APELLIDO  [${this.apellido.length}]: '${this.apellido}'`);
-    logger.debug(`CELULAR   [${this.celular.length}]: '${this.celular}'`);
-    logger.debug(`DIRECCION [${this.direccion.length}]: '${this.direccion}'`);
-    logger.debug(`CIUDAD    [${this.ciudad.length}]: '${this.ciudad}'`);
-    logger.debug(`EMAIL     [${this.email.length}]: '${this.email}'`);
+
+    let logLocation = `Cliente::${this.getTrama.name}`;
+
+    this.nombre = this.nombre.slice(0, 20).padEnd(20); // Limita la cantiad de caracteres a 20 y rellena a la izquierda con espacios
+    this.apellido = this.apellido.slice(0, 20).padEnd(20); // Limita la cantiad de caracteres a 20 y rellena a la izquierda con espacios
+    this.direccion = this.direccion.slice(0, 100).padEnd(100); // Limita la cantiad de caracteres a 100 y rellena a la izquierda con espacios
+    this.ciudad = this.ciudad.slice(0, 20).padEnd(20); // Limita la cantiad de caracteres a 20 y rellena a la izquierda con espacios
+    this.celular = this.celular.slice(0, 14).padStart(14); // Limita la cantiad de caracteres a 14 y rellena a la derecha con espacios
+    this.email = this.email.slice(0, 50).padEnd(50); // Limita la cantiad de caracteres a 50 y rellena a la izquierda con espacios
+
+    this._printData(logLocation);
+
+
+    return `${this.id}${this.nombre}${this.apellido}${this.celular}${this.direccion}${this.ciudad}${this.email}`;
+  };
+
+  /* Metodo que genera la trama variable del cliente */
+  /* Retorna la trama completa del cliente */
+  /* Formato:
+   | ID(10) | NOMBRE(n) | APELLIDO(n) | CELULAR(n) | DIRECCION(n) | CIUDAD(n) | EMAIL(n) |
+  */
+  /* retorna una trama de tamaño variable */
+  getTramaVariable(){
+    let logLocation = `Cliente::${this.getTrama.name}`;
+
+    this.nombre = withLenPrefix(this.nombre);
+    this.apellido = withLenPrefix(this.apellido);
+    this.direccion = withLenPrefix(this.direccion);
+    this.ciudad = withLenPrefix(this.ciudad);
+    this.celular = withLenPrefix(this.celular);
+    this.email = withLenPrefix(this.email);
+
+    this._printData(logLocation);
+
     return `${this.id}${this.nombre}${this.apellido}${this.celular}${this.direccion}${this.ciudad}${this.email}`;
   };
 

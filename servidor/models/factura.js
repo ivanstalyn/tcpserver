@@ -1,4 +1,5 @@
 /* eslint-disable max-len */
+const crypto = require('crypto');
 const { fakerES } = require('@faker-js/faker');
 const logger = require('../helpers/logger');
 const Cliente = require('./cliente');
@@ -38,6 +39,16 @@ class Factura {
     return `${this.nro}${this.cliente.getTrama()}${this.generarDetalle()}`;
   };
 
+  /* Metodo que genera la trama de la factura */
+  /* Retorna la trama completa de la factura */
+  /* Formato:
+   | NRO(17) | CLIENTE(n) | DETALLE_ITEMS(10 * 100) |
+  */
+
+  getTramaVariable(){
+    return `${this.nro}${this.cliente.getTramaVariable()}${this.generarDetalleVariable()}`;
+  };
+
   /* Metodo que genera el detalle de la factura */
   /* Retorna la trama completa del detalle de la factura */
   /* Cada factura tiene 10 items */
@@ -59,6 +70,35 @@ class Factura {
       this.detalleItems.push(item);
       /* Agrega la trama del item al detalle de la factura */
       respuesta += item.getTrama();
+    }
+    /* Imprime los datos del detalle de la factura */
+    this._printData(logLocation);
+    /* Retorna la trama del detalle de la factura */
+    return respuesta;
+
+  };
+
+  /* Metodo que genera el detalle de la factura */
+  /* Retorna la trama completa del detalle de la factura */
+  /* Cada factura tiene ed 1 a 20 items */
+  /* Formato:
+   | ORDEN(n) | CODIGO(n) | PRODUCTO(n) | PRODUCTO_NOMBRE(n) | CANTIDAD(n) | PRECIO(n) | SUBTOTAL(n) | IVA(n) | TOTAL(n) |
+  */
+
+  generarDetalleVariable(){
+    let logLocation = `Factura::${this.generarDetalleVariable.name}`;
+    let respuesta = '';
+
+    const n = crypto.randomInt(process.env.FACTURA_MIN | 1, (process.env.FACTURA_MAX | 1) + 1);
+    logger.info(`Número de items: ${n}`, logLocation);
+    /* Genera n items de factura */
+    for (let index = 1; index <= n; index++) {
+      /* Crea un nuevo item de factura */
+      let item = new ItemFactura(index);
+      /* Agrega el item al array de items de la factura */
+      this.detalleItems.push(item);
+      /* Agrega la trama del item al detalle de la factura */
+      respuesta += item.getTramaVariable();
     }
     /* Imprime los datos del detalle de la factura */
     this._printData(logLocation);

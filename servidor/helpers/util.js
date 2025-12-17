@@ -21,6 +21,12 @@ const delay = (ms = 0) => {
   });
 };
 
+const withLenPrefix = (value = '', padN = 3, padFiller = '0') => {
+  const str = String(value).trim();
+  return `${String(str.length).padStart(padN, padFiller)}${str}`;
+};
+
 module.exports = {
   delay,
+  withLenPrefix,
 };
